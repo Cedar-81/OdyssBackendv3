@@ -77,38 +77,7 @@ Content-Type: application/json
 }
 ```
 
-## Setup Instructions
 
-1. **Install Dependencies**
-   ```bash
-   npm install
-   ```
-
-2. **Environment Variables**
-   Create a `.env` file:
-   ```env
-   DB_HOST=localhost
-   DB_PORT=5432
-   DB_USERNAME=postgres
-   DB_PASSWORD=your_password
-   DB_NAME=odyss
-   NODE_ENV=development
-   ```
-
-3. **Database Setup**
-   - Ensure PostgreSQL is running
-   - Create database named `odyss`
-   - Tables will be auto-created by TypeORM
-
-4. **Run the Application**
-   ```bash
-   # Development mode
-   npm run start:dev
-   
-   # Production build
-   npm run build
-   npm run start:prod
-   ```
 
 ## Project Structure
 
