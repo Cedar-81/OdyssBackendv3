@@ -1,193 +1,222 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# OdyssBackend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A NestJS-based backend API for the Odyss platform, providing authentication, user management, playbook functionality, and AI-powered itinerary planning.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 🚀 Features
 
-## Description
+- **Authentication & Authorization**: Clerk-based authentication with JWT verification
+- **User Management**: User profiles and KYC (Know Your Customer) verification
+- **Playbook System**: Create, manage, and update travel playbooks
+- **Wallet & Pockets**: Financial management for travel expenses
+- **AI Planning**: AI-powered itinerary generation and planning
+- **Database Integration**: Supabase for data persistence
+- **Real-time Updates**: WebSocket support for live updates
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 🏗️ Architecture
 
-## Project setup
+### Core Technologies
+- **Framework**: NestJS (Node.js)
+- **Authentication**: Clerk
+- **Database**: Supabase (PostgreSQL)
+- **Language**: TypeScript
+- **Validation**: class-validator, class-transformer
 
-Based on Supabase schema:
-
-### Tables
-- `playbooks` - Main playbook information
-- `playbookdata` - JSONB data storage for playbook content
-- `playbookparticipants` - User participation in playbooks
-
-## API Endpoints
-
-### Playbooks
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/playbooks` | Create a new playbook |
-| `GET` | `/api/playbooks` | Get all playbooks |
-| `GET` | `/api/playbooks/:id` | Get a specific playbook |
-| `PATCH` | `/api/playbooks/:id` | Update a playbook |
-| `DELETE` | `/api/playbooks/:id` | Delete a playbook |
-
-### Playbook Data
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/playbooks/data` | Create playbook data |
-| `GET` | `/api/playbooks/:playbookId/data` | Get all data for a playbook |
-| `PATCH` | `/api/playbooks/data/:id` | Update playbook data |
-| `DELETE` | `/api/playbooks/data/:id` | Delete playbook data |
-
-## Request/Response Examples
-
-### Create Playbook
-```bash
-POST /api/playbooks
-Content-Type: application/json
-
-{
-  "title": "Paris Adventure",
-  "ownerId": "123e4567-e89b-12d3-a456-426614174000",
-  "destination": "Paris, France",
-  "startDate": "2025-08-03",
-  "endDate": "2025-08-21"
-}
-```
-
-### Create Playbook Data
-```bash
-POST /api/playbooks/data
-Content-Type: application/json
-
-{
-  "playbookId": "123e4567-e89b-12d3-a456-426614174000",
-  "data": {
-    "type": "itinerary",
-    "activities": [
-      {
-        "day": 1,
-        "activity": "Visit Eiffel Tower",
-        "time": "09:00",
-        "location": "Champ de Mars"
-      }
-    ]
-  }
-}
-```
-
-## Project Structure
-
+### Project Structure
 ```
 src/
-├── main.ts                 # Application entry point
-├── app.module.ts          # Root module
-└── playbooks/
-    ├── playbooks.module.ts
-    ├── playbooks.controller.ts
-    ├── playbooks.service.ts
-    ├── dto/
-    │   ├── create-playbook.dto.ts
-    │   ├── update-playbook.dto.ts
-    │   └── create-playbook-data.dto.ts
-    └── entities/
-        ├── playbook.entity.ts
-        ├── playbook-data.entity.ts
-        └── playbook-participant.entity.ts
+├── auth/                 # Authentication & authorization
+│   ├── guards/          # Route protection guards
+│   ├── clerk.strategy.ts # Passport strategy for Clerk
+│   └── auth.module.ts   # Auth module configuration
+├── users/               # User management
+├── playbooks/           # Playbook CRUD operations
+├── playbook-data/       # Playbook data management
+├── wallets/             # Wallet operations
+├── pockets/             # Pocket management
+├── kyc/                 # KYC verification
+├── ai-planner/          # AI itinerary planning
+├── supabase/            # Database service
+├── providers/           # External service providers
+├── interceptors/        # Request/response interceptors
+├── decorators/          # Custom decorators
+└── middleware/          # HTTP middleware
 ```
 
-## Development
+## 🔧 Setup & Installation
 
-- **Port**: 3000 (configurable via PORT env var)
-- **API Prefix**: `/api`
-- **CORS**: Enabled for all origins
-- **Validation**: Automatic request validation
-- **Error Handling**: Standardized error responses
+### Prerequisites
+- Node.js (v18 or higher)
+- Yarn package manager
+- Supabase account and project
+- Clerk account and application
 
-## Testing
+### Environment Variables
+Create a `.env` file in the root directory:
 
+```env
+# Clerk Configuration
+CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+CLERK_SECRET_KEY=your_clerk_secret_key
+CLERK_JWT_VERIFICATION_KEY=your_clerk_jwt_verification_key
+
+# Supabase Configuration
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# Application Configuration
+PORT=3000
+NODE_ENV=development
+```
+
+### Installation
 ```bash
-$ yarn install
+# Install dependencies
+yarn install
+
+# Development mode
+yarn start:dev
+
+# Production build
+yarn build
+yarn start:prod
 ```
 
-## Compile and run the project
+## 🔐 Authentication Flow
 
+### Overview
+The application uses Clerk for authentication with the following flow:
+
+1. **Client Authentication**: Users authenticate through Clerk's frontend SDK
+2. **JWT Token**: Client sends JWT token in Authorization header
+3. **Token Verification**: Backend verifies token using Clerk's verification key
+4. **User Sync**: User data is synced with Supabase database
+5. **Request Context**: User information is attached to request for route handlers
+
+### Implementation Details
+
+#### Clerk Strategy (`src/auth/clerk.strategy.ts`)
+- Extracts JWT from Authorization header
+- Verifies token using Clerk's verification key
+- Fetches user data from Clerk API
+- Returns user object for Passport
+
+#### Authentication Guard (`src/auth/guards/clerk.guard.ts`)
+- Global guard applied to all routes
+- Checks for `@Public()` decorator to bypass authentication
+- Uses Passport's 'clerk' strategy for authentication
+
+#### Supabase User Interceptor (`src/interceptors/supabase-user.interceptor.ts`)
+- Runs after authentication
+- Syncs Clerk user with Supabase database
+- Attaches Supabase user to request context
+
+## 📚 API Documentation
+
+### Authentication Endpoints
+All endpoints require authentication unless marked with `@Public()` decorator.
+
+### User Management
+- `GET /users` - Get current user profile
+- `PUT /users/kyc-status` - Update KYC status
+
+### Playbooks
+- `GET /playbooks` - List user's playbooks
+- `POST /playbooks` - Create new playbook
+- `PUT /playbooks/:id` - Update playbook
+- `DELETE /playbooks/:id` - Delete playbook
+
+### Playbook Data
+- `GET /playbook-data` - Get playbook data
+- `PUT /playbook-data` - Update playbook data
+
+### Wallets & Pockets
+- `GET /wallets` - Get user wallet
+- `POST /pockets/fund` - Fund pocket
+
+### KYC
+- `POST /kyc` - Submit KYC information
+- `GET /kyc` - Get KYC status
+
+### AI Planning
+- `POST /ai-planner/generate-itinerary` - Generate AI itinerary
+
+## 🛠️ Development
+
+### Code Style
+- ESLint for code linting
+- Prettier for code formatting
+- TypeScript strict mode enabled
+
+### Testing
 ```bash
-# development
-$ yarn run start
+# Unit tests
+yarn test
 
-# watch mode
-$ yarn run start:dev
+# E2E tests
+yarn test:e2e
 
-# production mode
-$ yarn run start:prod
+# Test coverage
+yarn test:cov
 ```
 
-## Run tests
+### Database Migrations
+The application uses Supabase for database management. Schema changes should be made through Supabase migrations.
 
+### Adding New Modules
+1. Create module directory in `src/`
+2. Implement controller, service, and DTOs
+3. Add module to `app.module.ts` imports
+4. Apply authentication guard as needed
+5. Add Supabase user interceptor if user context is required
+
+## 🔒 Security
+
+### Authentication
+- JWT tokens verified using Clerk's verification key
+- All routes protected by default
+- Public routes explicitly marked with `@Public()` decorator
+
+### Database
+- Supabase Row Level Security (RLS) enabled
+- Service role key used for backend operations
+- User data isolated by user ID
+
+### Environment Variables
+- Sensitive keys stored in environment variables
+- No hardcoded secrets in source code
+- Different keys for development and production
+
+## 🚀 Deployment
+
+### Production Build
 ```bash
-# unit tests
-$ yarn run test
-
-# e2e tests
-$ yarn run test:e2e
-
-# test coverage
-$ yarn run test:cov
+yarn build
+yarn start:prod
 ```
 
-## Deployment
+### Environment Configuration
+Ensure all environment variables are properly set in production environment.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### Database Setup
+- Supabase project configured with proper RLS policies
+- Required tables and relationships established
+- Clerk application configured with correct redirect URLs
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## 📝 Contributing
 
-```bash
-$ yarn install -g @nestjs/mau
-$ mau deploy
-```
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## 📄 License
 
-## Resources
+This project is licensed under the MIT License.
 
-Check out a few resources that may come in handy when working with NestJS:
+## 🆘 Support
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+For support and questions:
+- Check the [NestJS documentation](https://docs.nestjs.com/)
+- Review Clerk and Supabase documentation
+- Open an issue in the repository
