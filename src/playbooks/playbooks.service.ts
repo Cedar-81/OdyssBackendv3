@@ -46,10 +46,10 @@ export class PlaybooksService {
     
     // Convert date strings to Date objects if provided
     if (updatePlaybookDto.startDate) {
-      updatePlaybookDto.startDate = new Date(updatePlaybookDto.startDate);
+      updatePlaybookDto.startDate = new Date(updatePlaybookDto.startDate).toISOString();
     }
     if (updatePlaybookDto.endDate) {
-      updatePlaybookDto.endDate = new Date(updatePlaybookDto.endDate);
+      updatePlaybookDto.endDate = new Date(updatePlaybookDto.endDate).toISOString();
     }
     
     Object.assign(playbook, updatePlaybookDto);
