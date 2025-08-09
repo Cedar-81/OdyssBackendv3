@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PlaybooksModule } from './playbooks/playbooks.module';
@@ -19,6 +21,10 @@ import { PlaybookDataModule } from './playbook-data/playbook-data.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public'),
+      serveRoot: '/test',
+    }),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DB_HOST || 'localhost',
@@ -42,7 +48,6 @@ import { PlaybookDataModule } from './playbook-data/playbook-data.module';
   controllers: [AppController],
   providers: [
     ClerkClientProvider,
-    // Temporarily disabled global auth guard to test API
     {
       provide: APP_GUARD,
       useClass: ClerkAuthGuard,

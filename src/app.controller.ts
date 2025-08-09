@@ -19,4 +19,12 @@ export class AppController {
       timestamp: new Date().toISOString(),
     };
   }
+
+  @Get('config')
+  @Public()
+  getConfig(): { clerkPublishableKey: string } {
+    return {
+      clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY || '',
+    };
+  }
 }
