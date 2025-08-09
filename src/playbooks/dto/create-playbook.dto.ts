@@ -1,11 +1,8 @@
-import { IsString, IsOptional, IsDateString, IsUUID } from 'class-validator';
+import { IsString, IsOptional, IsDateString } from 'class-validator';
 
 export class CreatePlaybookDto {
   @IsString()
   title: string;
-
-  @IsUUID()
-  ownerId: string;
 
   @IsOptional()
   @IsString()
