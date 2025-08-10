@@ -12,7 +12,7 @@ import { UsersModule } from './users/users.module';
 import { SupabaseModule } from './supabase/supabase.module';
 import { ClerkClientProvider } from './providers/clerk-client.provider';
 import { ClerkAuthGuard } from './auth/guards/clerk.guard';
-import { AiPlannerModule } from './ai-planner/ai-planner.module';
+import { AiModule } from './ai/ai.module';
 import { KycModule } from './kyc/kyc.module';
 import { WalletsModule } from './wallets/wallets.module';
 import { PocketsModule } from './pockets/pockets.module';
@@ -39,7 +39,7 @@ import { PlaybookDataModule } from './playbook-data/playbook-data.module';
     AuthModule,
     UsersModule,
     PlaybooksModule,
-    AiPlannerModule,
+    AiModule,
     KycModule,
     WalletsModule,
     PocketsModule,
