@@ -23,7 +23,7 @@ const SYSTEM_MESSAGE = {
   content: readFileSync(
     join(__dirname, 'prompts', 'system-prompt.txt'),
     'utf-8'
-  ),
+  ),    
 };
 
 // Main agent node

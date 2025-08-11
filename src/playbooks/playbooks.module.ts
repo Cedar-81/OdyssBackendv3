@@ -1,19 +1,14 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlaybooksService } from './playbooks.service';
 import { PlaybooksController } from './playbooks.controller';
-import { Playbook } from './entities/playbook.entity';
-import { PlaybookData } from './entities/playbook-data.entity';
-import { PlaybookParticipant } from './entities/playbook-participant.entity';
-import { UsersModule } from '../users/users.module';
+import { SupabaseService } from 'src/supabase/supabase.service';
+import { UsersService } from 'src/users/users.service';
+import { SupabaseUserInterceptor } from 'src/interceptors/supabase-user.interceptor';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Playbook, PlaybookData, PlaybookParticipant]),
-    UsersModule,
-  ],
+  imports: [ ],
   controllers: [PlaybooksController],
-  providers: [PlaybooksService],
+  providers: [PlaybooksService, SupabaseService, UsersService],
   exports: [PlaybooksService],
 })
 export class PlaybooksModule {} 
