@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clerk Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #ffe6e6; color: #d32f2f; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+        button { margin: 5px; padding: 10px 15px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Clerk Debug Tool</h1>
+    
+    <div>
+        <button onclick="testConfig()">1. Test Config Endpoint</button>
+        <button onclick="loadClerkElements()">2. Load Clerk Elements</button>
+        <button onclick="testSignIn()">3. Test Sign In</button>
+        <button onclick="clearLogs()">Clear Logs</button>
+    </div>
+    
+    <div id="logs"></div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3000/api';
+        let CLERK_PUBLISHABLE_KEY = '';
+        let clerkLoaded = false;
+
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const logDiv = document.createElement('div');
+            logDiv.className = `log ${type}`;
+            logDiv.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            logsDiv.appendChild(logDiv);
+            console.log(message);
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        async function testConfig() {
+            try {
+                log('Testing config endpoint...');
+                const response = await fetch(`${API_BASE_URL}/config`);
+                const config = await response.json();
+                CLERK_PUBLISHABLE_KEY = config.clerkPublishableKey;
+                
+                if (CLERK_PUBLISHABLE_KEY) {
+                    log(`✅ Config loaded: ${CLERK_PUBLISHABLE_KEY.substring(0, 20)}...`, 'success');
+                } else {
+                    log('❌ No Clerk key found in config', 'error');
+                }
+            } catch (error) {
+                log(`❌ Config error: ${error.message}`, 'error');
+            }
+        }
+
+        function loadClerkElements() {
+            if (clerkLoaded) {
+                log('✅ Clerk Elements already loaded', 'success');
+                return;
+            }
+
+            if (!CLERK_PUBLISHABLE_KEY) {
+                log('❌ No Clerk key available. Run test config first.', 'error');
+                return;
+            }
+
+            log('Loading Clerk Elements...');
+            
+            // Load Clerk Elements CSS
+            const cssLink = document.createElement('link');
+            cssLink.rel = 'stylesheet';
+            cssLink.href = 'https://unpkg.com/@clerk/elements@latest/dist/elements.css';
+            document.head.appendChild(cssLink);
+
+            // Load Clerk Elements JS
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/@clerk/elements@latest/dist/elements.js';
+            script.onload = () => {
+                log('✅ Clerk Elements loaded successfully', 'success');
+                clerkLoaded = true;
+                
+                // Initialize Clerk Elements
+                if (window.ClerkElements) {
+                    window.ClerkElements.setPublishableKey(CLERK_PUBLISHABLE_KEY);
+                    log('✅ Clerk Elements initialized with publishable key', 'success');
+                }
+            };
+            script.onerror = () => {
+                log('❌ Failed to load Clerk Elements', 'error');
+            };
+            document.head.appendChild(script);
+        }
+
+        async function testSignIn() {
+            try {
+                if (!clerkLoaded || !window.ClerkElements) {
+                    log('❌ Clerk Elements not loaded. Run load clerk elements first.', 'error');
+                    return;
+                }
+
+                log('Opening sign in with Clerk Elements...');
+                
+                // Create a modal for sign in
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0,0,0,0.5);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 1000;
+                `;
+                
+                const modalContent = document.createElement('div');
+                modalContent.style.cssText = `
+                    background: white;
+                    padding: 20px;
+                    border-radius: 8px;
+                    max-width: 400px;
+                    width: 90%;
+                `;
+                
+                modal.appendChild(modalContent);
+                document.body.appendChild(modal);
+                
+                // Add close button
+                const closeBtn = document.createElement('button');
+                closeBtn.textContent = 'Close';
+                closeBtn.onclick = () => document.body.removeChild(modal);
+                modalContent.appendChild(closeBtn);
+                
+                // Render sign in component
+                window.ClerkElements.renderSignIn(modalContent, {
+                    afterSignInUrl: window.location.href,
+                    signUpUrl: window.location.href
+                });
+                
+                log('✅ Sign in modal opened with Clerk Elements', 'success');
+            } catch (error) {
+                log(`❌ Sign in error: ${error.message}`, 'error');
+                console.error('Full error:', error);
+            }
+        }
+
+        // Auto-test on load
+        window.addEventListener('load', () => {
+            log('Page loaded, starting auto-test...');
+            setTimeout(testConfig, 1000);
+        });
+    </script>
+</body>
+</html>

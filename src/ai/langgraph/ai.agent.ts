@@ -17,19 +17,31 @@ const baseModel = new ChatOpenAI({
 });
 const model = baseModel.bindTools(tools);
 
-
-const SYSTEM_MESSAGE = {
-  role: 'system' as const,
-  content: readFileSync(
-    join(__dirname, 'prompts', 'system-prompt.txt'),
-    'utf-8'
-  ),    
+// Lazy loading of system prompt to avoid file reading at module load time
+const getSystemMessage = () => {
+  try {
+    const content = readFileSync(
+      join(__dirname, 'prompts', 'system-prompt.txt'),
+      'utf-8'
+    );
+    return {
+      role: 'system' as const,
+      content,
+    };
+  } catch (error) {
+    console.error('Error reading system prompt:', error);
+    // Fallback system message
+    return {
+      role: 'system' as const,
+      content: 'You are a helpful AI assistant.',
+    };
+  }
 };
 
 // Main agent node
 const agentNode = async (state: typeof StateAnnotation.State) => {
   const response = await model.invoke([
-    SYSTEM_MESSAGE,
+    getSystemMessage(),
     ...state.messages
   ]);
   return { messages: [response] };

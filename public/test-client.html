@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OdyssPivot API Tester</title>
-    <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
     <style>
         body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
         .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
@@ -57,9 +56,6 @@
     </div>
 
     <script>
-        // Initialize Clerk (replace with your actual publishable key)
-        const clerk = window.Clerk;
-        
         const API_BASE_URL = 'http://localhost:3000/api';
         
         let currentUser = null;
@@ -69,7 +65,7 @@
         async function checkServerStatus() {
             try {
                 const response = await fetch(`${API_BASE_URL}/health`);
-                const health = await response.json();
+                await response.json();
                 document.getElementById('server-status').innerHTML = '<span class="success">✅ Online</span>';
                 return true;
             } catch (error) {
@@ -78,16 +74,47 @@
             }
         }
 
+        function waitForClerkReady(timeoutMs = 10000) {
+            return new Promise((resolve, reject) => {
+                if (window.Clerk?.loaded) return resolve(true);
+                const onLoaded = () => {
+                    window.removeEventListener('clerk:loaded', onLoaded);
+                    resolve(true);
+                };
+                window.addEventListener('clerk:loaded', onLoaded);
+                const timer = setTimeout(() => {
+                    window.removeEventListener('clerk:loaded', onLoaded);
+                    reject(new Error('Clerk did not become ready in time'));
+                }, timeoutMs);
+            });
+        }
+
+        async function injectClerkScriptWithFallback(pk) {
+            return new Promise((resolve, reject) => {
+                const add = (src, onFail) => {
+                    const s = document.createElement('script');
+                    s.async = true;
+                    s.crossOrigin = 'anonymous';
+                    s.setAttribute('data-clerk-publishable-key', pk);
+                    s.src = src;
+                    s.onload = () => resolve(true);
+                    s.onerror = () => onFail && onFail();
+                    document.head.appendChild(s);
+                };
+                add('https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js', () => {
+                    add('https://unpkg.com/@clerk/clerk-js@latest/dist/clerk.browser.js', () => reject(new Error('Failed to load Clerk JS from both CDNs')));
+                });
+            });
+        }
+
         async function initializeClerk() {
             try {
-                // Check server status first
                 const serverOnline = await checkServerStatus();
                 if (!serverOnline) {
                     updateResponse('Error: Server is offline. Please start the NestJS server.', 'error');
                     return;
                 }
 
-                // Fetch configuration from server
                 const configResponse = await fetch(`${API_BASE_URL}/config`);
                 const config = await configResponse.json();
                 CLERK_PUBLISHABLE_KEY = config.clerkPublishableKey;
@@ -99,13 +126,12 @@
 
                 updateResponse(`✅ Loaded Clerk config: ${CLERK_PUBLISHABLE_KEY.substring(0, 15)}...`, 'success');
 
-                await clerk.load({
-                    publishableKey: CLERK_PUBLISHABLE_KEY
-                });
-                
-                if (clerk.user) {
-                    currentUser = clerk.user;
-                    authToken = await clerk.session.getToken();
+                await injectClerkScriptWithFallback(CLERK_PUBLISHABLE_KEY);
+                await waitForClerkReady();
+
+                if (window.Clerk?.user) {
+                    currentUser = window.Clerk.user;
+                    authToken = await window.Clerk.session.getToken();
                     updateAuthStatus();
                 }
             } catch (error) {
@@ -116,7 +142,11 @@
 
         async function signIn() {
             try {
-                await clerk.openSignIn();
+                if (!window.Clerk || !window.Clerk.loaded) {
+                    updateResponse('Error: Clerk not initialized yet.', 'error');
+                    return;
+                }
+                await window.Clerk.openSignIn();
             } catch (error) {
                 updateResponse('Sign in error: ' + error.message, 'error');
             }
@@ -124,7 +154,9 @@
 
         async function signOut() {
             try {
-                await clerk.signOut();
+                if (window.Clerk) {
+                    await window.Clerk.signOut();
+                }
                 currentUser = null;
                 authToken = null;
                 updateAuthStatus();
@@ -141,7 +173,7 @@
             if (currentUser) {
                 statusEl.innerHTML = '<span class="success">✅ Authenticated</span>';
                 userInfoEl.innerHTML = `
-                    <strong>User:</strong> ${currentUser.emailAddresses[0]?.emailAddress || 'N/A'}<br>
+                    <strong>User:</strong> ${currentUser.emailAddresses?.[0]?.emailAddress || 'N/A'}<br>
                     <strong>ID:</strong> ${currentUser.id}
                 `;
             } else {
@@ -157,8 +189,7 @@
             }
 
             try {
-                // Refresh token to ensure it's valid
-                authToken = await clerk.session.getToken();
+                authToken = await window.Clerk.session.getToken();
                 
                 const response = await fetch(`${API_BASE_URL}${endpoint}`, {
                     ...options,
@@ -238,21 +269,6 @@
             responseEl.className = type;
         }
 
-        // Listen for Clerk auth changes
-        clerk.addListener(({ session, user }) => {
-            currentUser = user;
-            if (session) {
-                session.getToken().then(token => {
-                    authToken = token;
-                    updateAuthStatus();
-                });
-            } else {
-                authToken = null;
-                updateAuthStatus();
-            }
-        });
-
-        // Initialize when page loads
         document.addEventListener('DOMContentLoaded', initializeClerk);
     </script>
 </body>
