@@ -24,4 +24,4 @@ export class SupabaseUserInterceptor implements NestInterceptor {
 
     return next.handle();
   }
-} 
+}
