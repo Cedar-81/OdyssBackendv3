@@ -10,7 +10,7 @@ export class SupabaseUserInterceptor implements NestInterceptor {
     const req = context.switchToHttp().getRequest();
     const clerkUser = req.user; // Clerk user from Passport strategy
 
-    console.log('clerkUser: ', clerkUser);
+    // console.log('clerkUser: ', clerkUser);
 
     if (!clerkUser || !clerkUser.id || !clerkUser.emailAddresses) {
       throw new UnauthorizedException('Invalid Clerk user');

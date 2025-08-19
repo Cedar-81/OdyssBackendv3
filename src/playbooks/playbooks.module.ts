@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
-import { PlaybooksService } from './playbooks.service';
+import { PlaybookService } from './playbooks.service';
 import { PlaybooksController } from './playbooks.controller';
 import { SupabaseService } from 'src/supabase/supabase.service';
 import { UsersService } from 'src/users/users.service';
-import { SupabaseUserInterceptor } from 'src/interceptors/supabase-user.interceptor';
+import { PlaybookDocsStore } from './playbook-docs.store';
 
 @Module({
   imports: [ ],
   controllers: [PlaybooksController],
-  providers: [PlaybooksService, SupabaseService, UsersService],
-  exports: [PlaybooksService],
+  providers: [PlaybookService, SupabaseService, UsersService, PlaybookDocsStore],
+  exports: [PlaybookService],
 })
 export class PlaybooksModule {} 

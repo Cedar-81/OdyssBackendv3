@@ -1,161 +1,104 @@
-// import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-// import { InjectRepository } from '@nestjs/typeorm';
-// import { Repository } from 'typeorm';
-// import { Playbook } from './entities/playbook.entity';
-// import { PlaybookData } from './entities/playbook-data.entity';
-// import { CreatePlaybookDto } from './dto/create-playbook.dto';
-// import { UpdatePlaybookDto } from './dto/update-playbook.dto';
-// import { CreatePlaybookDataDto } from './dto/create-playbook-data.dto';
-
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { SupabaseService } from '../supabase/supabase.service';
+import { Injectable } from "@nestjs/common";
 import { CreatePlaybookDto } from './dto/create-playbook.dto';
-import { UpdatePlaybookDto } from './dto/update-playbook.dto';
-import { CreatePlaybookDataDto } from '../playbook-data/dto/create-playbook-data.dto';
+import { SupabaseService } from 'src/supabase/supabase.service';
+import { createPlaybookDocFromDto, decodeFileDataToYDoc, yDocToJSON } from './interfaces/playbook-helper.interface';
+import * as Y from 'yjs';
+
 
 @Injectable()
-export class PlaybooksService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+export class PlaybookService {
+    constructor(private readonly supabaseService: SupabaseService) {}
 
-  // User-specific Playbook CRUD operations
-  async createForUser(createPlaybookDto: CreatePlaybookDto, userId: string): Promise<any> {
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
-      .from('playbooks')
-      .insert({ ...createPlaybookDto, owner_id: userId })
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
-  }
+    async createPlaybook(userId: string, playbookData: CreatePlaybookDto) {
+        try {
+            console.log('🔧 PlaybookService.createPlaybook called with:');
+            console.log('  userId:', userId);
+            console.log('  playbookData:', JSON.stringify(playbookData, null, 2));
+            
+            const client = this.supabaseService.getClient()
+            const ydoc = createPlaybookDocFromDto(playbookData); 
+            const initialState = Buffer.from(Y.encodeStateAsUpdate(ydoc));
+            
+            console.log('  YDoc created, initialState length:', initialState.length, playbookData.playbookId);
+            
+            const insertData = {
+                id: playbookData.playbookId,
+                owner_id: userId,
+                file_data: initialState
+            };
+            // console.log('  Inserting data:', JSON.stringify(insertData, null, 2));
 
-  async findAllForUser(userId: string): Promise<any[]> {
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
-      .from('playbooks')
-      .select('*, playbookdata(*), playbookparticipants(*)')
-      .eq('owner_id', userId)
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-    return data;
-  }
+            const { data, error } = await client.from("playbooksv2").insert(insertData).select("id").single()
 
-  async findOneForUser(id: string, userId: string): Promise<any> {
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
-      .from('playbooks')
-      .select('*, playbookdata(*), playbookparticipants(*)')
-      .eq('id', id)
-      .eq('owner_id', userId)
-      .single();
-    if (error || !data) {
-      throw new NotFoundException(`Playbook with ID ${id} not found or access denied`);
-    }
-    return data;
-  }
+            console.log('  Supabase response:');
+            console.log('    data:', data);
+            console.log('    error:', error);
 
-  async updateForUser(id: string, updatePlaybookDto: UpdatePlaybookDto, userId: string): Promise<any> {
-    const supabase = this.supabaseService.getClient();
-    // Ensure playbook exists and user owns it
-    await this.findOneForUser(id, userId);
+            if (error) {
+                console.error('  Supabase error:', error);
+                throw new Error(`Error creating playbook: ${error.message}`);
+            }
 
-    if (updatePlaybookDto.startDate) {
-      updatePlaybookDto.startDate = new Date(updatePlaybookDto.startDate).toISOString();
-    }
-    if (updatePlaybookDto.endDate) {
-      updatePlaybookDto.endDate = new Date(updatePlaybookDto.endDate).toISOString();
+            if (!data || !data.id) {
+                console.error('  No data returned from Supabase');
+                throw new Error('No data returned from Supabase insert operation');
+            }
+
+            console.log('  ✅ Playbook created successfully with ID:', data.id);
+            // Return the new playbook ID so client can join its room
+            return { playbookId: data.id };
+            
+        } catch (error) {
+            console.error('  ❌ Error in createPlaybook:', error);
+            throw error;
+        }
     }
 
-    const { data, error } = await supabase
-      .from('playbooks')
-      .update(updatePlaybookDto)
-      .eq('id', id)
-      .eq('owner_id', userId)
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
-  }
+    async loadPlaybook(playbookId: string, userId: string) {
+        const client = this.supabaseService.getClient();
 
-  async removeForUser(id: string, userId: string): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-    // Ensure playbook exists and user owns it
-    await this.findOneForUser(id, userId);
+        // Fetch the playbook from DB
+        const { data, error } = await client
+            .from("playbooksv2")
+            .select("id, owner_id, file_data")
+            .eq("id", playbookId)
+            .single();
 
-    const { error } = await supabase
-      .from('playbooks')
-      .delete()
-      .eq('id', id)
-      .eq('owner_id', userId);
-    if (error) throw error;
-  }
+        if (error) {
+            throw new Error(`Error loading playbook: ${error.message}`);
+        }
 
-  // Legacy methods (kept for backward compatibility)
-  async create(createPlaybookDto: CreatePlaybookDto): Promise<any> {
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
-      .from('playbooks')
-      .insert(createPlaybookDto)
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
-  }
+        // Access control — only owner or collaborators can open
+        if (data.owner_id !== userId) {
+            throw new Error("Access denied");
+        }
 
-  async findAll(): Promise<any[]> {
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
-      .from('playbooks')
-      .select('*, playbookdata(*), playbookparticipants(*)');
-    if (error) throw error;
-    return data;
-  }
-
-  async findOne(id: string): Promise<any> {
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
-      .from('playbooks')
-      .select('*, playbookdata(*), playbookparticipants(*)')
-      .eq('id', id)
-      .single();
-    if (error || !data) {
-      throw new NotFoundException(`Playbook with ID ${id} not found`);
-    }
-    return data;
-  }
-
-  async update(id: string, updatePlaybookDto: UpdatePlaybookDto): Promise<any> {
-    const supabase = this.supabaseService.getClient();
-    // Ensure playbook exists
-    await this.findOne(id);
-
-    if (updatePlaybookDto.startDate) {
-      updatePlaybookDto.startDate = new Date(updatePlaybookDto.startDate).toISOString();
-    }
-    if (updatePlaybookDto.endDate) {
-      updatePlaybookDto.endDate = new Date(updatePlaybookDto.endDate).toISOString();
+        const decodedFileDataToYdoc = decodeFileDataToYDoc(data.file_data)
+        const decodedYdocToJson = yDocToJSON(decodedFileDataToYdoc)
+        console.log('decodedJson: ', decodedYdocToJson)
+        
+        return {
+            playbookId: data.id,
+            ownerId: data.owner_id,
+            fileData: data.file_data, // this is the encoded Yjs state
+            fileDataJson: decodedYdocToJson
+        };
     }
 
-    const { data, error } = await supabase
-      .from('playbooks')
-      .update(updatePlaybookDto)
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
-  }
+    async savePlaybook(playbookId: string, ydoc: Y.Doc) {
+        const client = this.supabaseService.getClient();
 
-  async remove(id: string): Promise<void> {
-    const supabase = this.supabaseService.getClient();
-    // Ensure playbook exists
-    await this.findOne(id);
+        // Encode the Y.Doc state to a binary format
+        const update = Buffer.from(Y.encodeStateAsUpdate(ydoc));
 
-    const { error } = await supabase
-      .from('playbooks')
-      .delete()
-      .eq('id', id);
-    if (error) throw error;
-  }
+        const { error } = await client
+            .from("playbooksv2")
+            .update({ file_data: update })
+            .eq("id", playbookId);
+
+        if (error) {
+            throw new Error(`Error saving playbook: ${error.message}`);
+        }
+    }
 
 }

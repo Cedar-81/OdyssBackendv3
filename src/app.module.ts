@@ -5,7 +5,6 @@ import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PlaybooksModule } from './playbooks/playbooks.module';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -16,7 +15,7 @@ import { AiModule } from './ai/ai.module';
 import { KycModule } from './kyc/kyc.module';
 import { WalletsModule } from './wallets/wallets.module';
 import { PocketsModule } from './pockets/pockets.module';
-import { PlaybookDataModule } from './playbook-data/playbook-data.module';
+import { CollabModule } from './collab/collab.module';
 
 @Module({
   imports: [
@@ -33,7 +32,7 @@ import { PlaybookDataModule } from './playbook-data/playbook-data.module';
     KycModule,
     WalletsModule,
     PocketsModule,
-    PlaybookDataModule,
+    CollabModule,
   ],
   controllers: [AppController],
   providers: [

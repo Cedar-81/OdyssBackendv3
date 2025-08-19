@@ -3,54 +3,60 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
-  Delete,
-  HttpCode,
-  HttpStatus,
-  UseInterceptors,
   Req,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
-import { PlaybooksService } from './playbooks.service';
-import { CreatePlaybookDto } from './dto/create-playbook.dto';
-import { UpdatePlaybookDto } from './dto/update-playbook.dto';
+import { PlaybookService } from './playbooks.service';
+import type { CreatePlaybookDto } from './dto/create-playbook.dto';
 import { SupabaseUserInterceptor } from '../interceptors/supabase-user.interceptor';
-import type { AuthenticatedRequest } from './interfaces/request.interface';
+import { UseInterceptors } from '@nestjs/common';
 
 @Controller('playbooks')
 @UseInterceptors(SupabaseUserInterceptor)
 export class PlaybooksController {
-  constructor(private readonly playbooksService: PlaybooksService) {}
+  constructor(private readonly playbookService: PlaybookService) {}
 
-  // Playbook CRUD endpoints
+  /** Create a new playbook */
   @Post()
-  create(@Body() createPlaybookDto: CreatePlaybookDto, @Req() req: AuthenticatedRequest) {
-    return this.playbooksService.createForUser(createPlaybookDto, req.supabaseUser.id);
+  async createPlaybook(@Req() req: any, @Body() playbookData: CreatePlaybookDto) {
+    try {
+      const userId = req.supabaseUser.id; // Now using supabaseUser from interceptor
+      const result = await this.playbookService.createPlaybook(userId, playbookData);
+      return { playbookId: result.playbookId };
+    } catch (err) {
+      throw new HttpException(err.message, HttpStatus.BAD_REQUEST);
+    }
   }
 
-  @Get()
-  findAll(@Req() req: AuthenticatedRequest) {
-    console.log("id: ", req.supabaseUser.id)
-    return this.playbooksService.findAllForUser(req.supabaseUser.id);
-  }
-
+  /** Load a specific playbook by ID */
   @Get(':id')
-  findOne(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
-    return this.playbooksService.findOneForUser(id, req.supabaseUser.id);
+  async loadPlaybook(@Param('id') playbookId: string, @Req() req: any) {
+    try {
+      const userId = req.supabaseUser.id;
+      const playbook = await this.playbookService.loadPlaybook(playbookId, userId);
+      return playbook;
+    } catch (err) {
+      throw new HttpException(err.message, HttpStatus.BAD_REQUEST);
+    }
   }
 
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updatePlaybookDto: UpdatePlaybookDto,
-    @Req() req: AuthenticatedRequest,
-  ) {
-    return this.playbooksService.updateForUser(id, updatePlaybookDto, req.supabaseUser.id);
-  }
+  /** Optionally: list all playbooks for the authenticated user */
+  @Get()
+  async listPlaybooks(@Req() req: any) {
+    try {
+      const userId = req.supabaseUser.id;
+      const client = this.playbookService['supabaseService'].getClient();
+      const { data, error } = await client
+        .from('playbooksv2')
+        .select('id, owner_id')
+        .eq('owner_id', userId);
 
-  @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
-    return this.playbooksService.removeForUser(id, req.supabaseUser.id);
+      if (error) throw new Error(error.message);
+      return data;
+    } catch (err) {
+      throw new HttpException(err.message, HttpStatus.BAD_REQUEST);
+    }
   }
 }
