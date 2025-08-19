@@ -43,18 +43,20 @@ export class PlaybooksController {
   }
 
   /** Optionally: list all playbooks for the authenticated user */
-  @Get()
+  @Get("")
   async listPlaybooks(@Req() req: any) {
     try {
       const userId = req.supabaseUser.id;
-      const client = this.playbookService['supabaseService'].getClient();
-      const { data, error } = await client
-        .from('playbooksv2')
-        .select('id, owner_id')
-        .eq('owner_id', userId);
-
-      if (error) throw new Error(error.message);
-      return data;
+      const playbooks = await this.playbookService.getAllPlaybooksByUser(userId);
+      
+      // Remove fileData from each playbook
+      const filteredPlaybooks = playbooks.map(playbook => ({
+        playbookId: playbook.playbookId,
+        ownerId: playbook.ownerId,
+        fileDataJson: playbook.fileDataJson
+      }));
+      
+      return filteredPlaybooks;
     } catch (err) {
       throw new HttpException(err.message, HttpStatus.BAD_REQUEST);
     }

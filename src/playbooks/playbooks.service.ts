@@ -85,6 +85,35 @@ export class PlaybookService {
         };
     }
 
+    async getAllPlaybooksByUser(userId: string) {
+        const client = this.supabaseService.getClient();
+
+        // Fetch all playbooks owned by the user
+        const { data, error } = await client
+            .from("playbooksv2")
+            .select("id, owner_id, file_data")
+            .eq("owner_id", userId);
+
+        if (error) {
+            throw new Error(`Error loading user playbooks: ${error.message}`);
+        }
+
+        // Process each playbook
+        const playbooks = data.map(playbook => {
+            const decodedFileDataToYdoc = decodeFileDataToYDoc(playbook.file_data);
+            const decodedYdocToJson = yDocToJSON(decodedFileDataToYdoc);
+            
+            return {
+                playbookId: playbook.id,
+                ownerId: playbook.owner_id,
+                fileData: playbook.file_data,
+                fileDataJson: decodedYdocToJson
+            };
+        });
+
+        return playbooks;
+    }
+
     async savePlaybook(playbookId: string, ydoc: Y.Doc) {
         const client = this.supabaseService.getClient();
 
