@@ -18,7 +18,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "postbuild": "cp -R src/ai/langgraph/prompts dist/ai/langgraph/"
+    "postbuild": "cp -R src/ai/resources/prompts dist/ai/resources/"
   },
   "dependencies": {
     "@clerk/backend": "^2.6.2",
