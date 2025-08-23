@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OdyssPivot API Tester</title>
+    <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .auth-section { background-color: #f0f9ff; }
+        .test-section { background-color: #f9fdf4; }
+        button { margin: 5px; padding: 10px 15px; cursor: pointer; }
+        .success { color: green; }
+        .error { color: red; }
+        textarea { width: 100%; height: 100px; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🚀 OdyssPivot API Tester</h1>
+    <p><strong>Server:</strong> <span id="server-status">Checking...</span> | <strong>Access:</strong> <code>http://localhost:3000/test/test-client.html</code></p>
+    
+    <!-- Authentication Section -->
+    <div class="section auth-section">
+        <h2>🔐 Authentication</h2>
+        <div id="auth-status">Not authenticated</div>
+        <div id="auth-controls">
+            <button onclick="signIn()">Sign In with Clerk</button>
+            <button onclick="signOut()">Sign Out</button>
+        </div>
+        <div id="user-info"></div>
+    </div>
+
+    <!-- API Testing Section -->
+    <div class="section test-section">
+        <h2>🧪 API Testing</h2>
+        
+        <h3>Create Playbook</h3>
+        <textarea id="create-playbook-data" placeholder='{"title":"Trip to Paris","destination":"Paris, France","startDate":"2025-08-03","endDate":"2025-08-21"}'></textarea>
+        <button onclick="createPlaybook()">Create Playbook</button>
+        
+        <h3>Get All Playbooks</h3>
+        <button onclick="getAllPlaybooks()">Get My Playbooks</button>
+        
+        <h3>Get Playbook by ID</h3>
+        <input type="text" id="playbook-id" placeholder="Enter playbook ID">
+        <button onclick="getPlaybook()">Get Playbook</button>
+        
+        <h3>Create Playbook Data</h3>
+        <input type="text" id="playbook-data-id" placeholder="Playbook ID">
+        <textarea id="playbook-data" placeholder='{"itinerary":[{"day":1,"activities":["Visit Eiffel Tower"]}],"budget":{"total":2000}}'></textarea>
+        <button onclick="createPlaybookData()">Add Playbook Data</button>
+        
+        <h3>Response</h3>
+        <pre id="response"></pre>
+    </div>
+
+    <script>
+        // Initialize Clerk (replace with your actual publishable key)
+        const clerk = window.Clerk;
+        
+        const API_BASE_URL = 'http://localhost:3000/api';
+        
+        let currentUser = null;
+        let authToken = null;
+        let CLERK_PUBLISHABLE_KEY = '';
+
+        async function checkServerStatus() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const health = await response.json();
+                document.getElementById('server-status').innerHTML = '<span class="success">✅ Online</span>';
+                return true;
+            } catch (error) {
+                document.getElementById('server-status').innerHTML = '<span class="error">❌ Offline</span>';
+                return false;
+            }
+        }
+
+        async function initializeClerk() {
+            try {
+                // Check server status first
+                const serverOnline = await checkServerStatus();
+                if (!serverOnline) {
+                    updateResponse('Error: Server is offline. Please start the NestJS server.', 'error');
+                    return;
+                }
+
+                // Fetch configuration from server
+                const configResponse = await fetch(`${API_BASE_URL}/config`);
+                const config = await configResponse.json();
+                CLERK_PUBLISHABLE_KEY = config.clerkPublishableKey;
+                
+                if (!CLERK_PUBLISHABLE_KEY) {
+                    updateResponse('Error: CLERK_PUBLISHABLE_KEY not set in server environment variables', 'error');
+                    return;
+                }
+
+                updateResponse(`✅ Loaded Clerk config: ${CLERK_PUBLISHABLE_KEY.substring(0, 15)}...`, 'success');
+
+                await clerk.load({
+                    publishableKey: CLERK_PUBLISHABLE_KEY
+                });
+                
+                if (clerk.user) {
+                    currentUser = clerk.user;
+                    authToken = await clerk.session.getToken();
+                    updateAuthStatus();
+                }
+            } catch (error) {
+                console.error('Clerk initialization error:', error);
+                updateResponse('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function signIn() {
+            try {
+                await clerk.openSignIn();
+            } catch (error) {
+                updateResponse('Sign in error: ' + error.message, 'error');
+            }
+        }
+
+        async function signOut() {
+            try {
+                await clerk.signOut();
+                currentUser = null;
+                authToken = null;
+                updateAuthStatus();
+                updateResponse('Signed out successfully', 'success');
+            } catch (error) {
+                updateResponse('Sign out error: ' + error.message, 'error');
+            }
+        }
+
+        function updateAuthStatus() {
+            const statusEl = document.getElementById('auth-status');
+            const userInfoEl = document.getElementById('user-info');
+            
+            if (currentUser) {
+                statusEl.innerHTML = '<span class="success">✅ Authenticated</span>';
+                userInfoEl.innerHTML = `
+                    <strong>User:</strong> ${currentUser.emailAddresses[0]?.emailAddress || 'N/A'}<br>
+                    <strong>ID:</strong> ${currentUser.id}
+                `;
+            } else {
+                statusEl.innerHTML = '<span class="error">❌ Not authenticated</span>';
+                userInfoEl.innerHTML = '';
+            }
+        }
+
+        async function makeAuthenticatedRequest(endpoint, options = {}) {
+            if (!authToken) {
+                updateResponse('Error: Not authenticated. Please sign in first.', 'error');
+                return;
+            }
+
+            try {
+                // Refresh token to ensure it's valid
+                authToken = await clerk.session.getToken();
+                
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`,
+                        ...options.headers
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateResponse(JSON.stringify(data, null, 2), 'success');
+                } else {
+                    updateResponse(`Error ${response.status}: ${JSON.stringify(data, null, 2)}`, 'error');
+                }
+                
+                return data;
+            } catch (error) {
+                updateResponse('Request error: ' + error.message, 'error');
+            }
+        }
+
+        async function createPlaybook() {
+            const data = document.getElementById('create-playbook-data').value;
+            try {
+                const playbook = JSON.parse(data || '{"title":"Default Trip"}');
+                await makeAuthenticatedRequest('/playbooks', {
+                    method: 'POST',
+                    body: JSON.stringify(playbook)
+                });
+            } catch (error) {
+                updateResponse('Invalid JSON: ' + error.message, 'error');
+            }
+        }
+
+        async function getAllPlaybooks() {
+            await makeAuthenticatedRequest('/playbooks');
+        }
+
+        async function getPlaybook() {
+            const id = document.getElementById('playbook-id').value;
+            if (!id) {
+                updateResponse('Please enter a playbook ID', 'error');
+                return;
+            }
+            await makeAuthenticatedRequest(`/playbooks/${id}`);
+        }
+
+        async function createPlaybookData() {
+            const playbookId = document.getElementById('playbook-data-id').value;
+            const data = document.getElementById('playbook-data').value;
+            
+            if (!playbookId) {
+                updateResponse('Please enter a playbook ID', 'error');
+                return;
+            }
+            
+            try {
+                const playbookData = JSON.parse(data || '{}');
+                await makeAuthenticatedRequest('/playbooks/data', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        playbookId: playbookId,
+                        data: playbookData
+                    })
+                });
+            } catch (error) {
+                updateResponse('Invalid JSON: ' + error.message, 'error');
+            }
+        }
+
+        function updateResponse(message, type = 'info') {
+            const responseEl = document.getElementById('response');
+            responseEl.textContent = message;
+            responseEl.className = type;
+        }
+
+        // Listen for Clerk auth changes
+        clerk.addListener(({ session, user }) => {
+            currentUser = user;
+            if (session) {
+                session.getToken().then(token => {
+                    authToken = token;
+                    updateAuthStatus();
+                });
+            } else {
+                authToken = null;
+                updateAuthStatus();
+            }
+        });
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initializeClerk);
+    </script>
+</body>
+</html>
